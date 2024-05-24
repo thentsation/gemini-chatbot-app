@@ -9,7 +9,7 @@ from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 import streamlit as st
 
-
+# Configura a página principal da aplicação.
 def init_page() -> None:
     st.set_page_config(
         page_title="ChatGPT Personal"
@@ -18,6 +18,7 @@ def init_page() -> None:
     st.sidebar.title("Options")
 
 
+# Inicializa e gerencia as mensagens da sessão do usuário.
 def init_messages() -> None:
     clear_button = st.sidebar.button("Clear Conversation", key="clear")
     if clear_button or "messages" not in st.session_state:
@@ -28,6 +29,7 @@ def init_messages() -> None:
         st.session_state.costs = []
 
 
+# Escolhe e configura um modelo de linguagem.
 def select_llm() -> Union[ChatOpenAI, LlamaCpp]:
     model_name = st. sidebar.radio("Choose LLM:",
                                     ("gpt-3.5-turbo-0613", "gpt-4",
@@ -49,6 +51,7 @@ def select_llm() -> Union[ChatOpenAI, LlamaCpp]:
         )
 
 
+# Processa as mensagens usando o modelo de linguagem especificado e retorna a resposta gerada junto com o custo total da operação.
 def get_answer(llm, messages) -> tuple[str, float]:
     if isinstance(llm, ChatOpenAI):
         with get_openai_callback() as cb:
@@ -56,4 +59,3 @@ def get_answer(llm, messages) -> tuple[str, float]:
         return answer.content, cb.total_cost
     if isinstance(llm, LlamaCpp):
         return llm(llama_v2_prompt(convert_langchainschema_to_dict(messages))), 0.0
-        
