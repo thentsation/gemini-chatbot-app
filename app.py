@@ -121,3 +121,35 @@ def llama_v2_prompt(messages: List[dict]) -> str:
     return "".join(messages_list)
 
 
+# Configura e executa a aplicação principal
+def main() -> None:
+    _ = load_dotenv(find_dotenv())
+
+    init_page()
+    llm = select_llm()
+    init_messages()
+
+    # Supervide user input 
+    if user_input := st.chat_input("Input your question!"):
+        st.session_state.messages.append(HumanMessage(content=user_input))
+        with st.spinner("ChatGPT is typing ..."):
+            answer, cost = get_answer(llm, st.session_state.messages)
+        st.session_state.messages.append(AIMessage(content=answer))
+        st.session_state.costs.append(cost)
+
+    # Display chat history
+    messages = st.session_state.get("messages", [])
+    for message in messages:
+        if isinstance(message, AIMessage):
+            with st.chat_message("assistant"):
+                st.mardkown(message.content)
+    
+    costs = st.session_state.get("costs", [])
+    st.sidebar.mardkown("## Costs")
+    st.sidebar.mardkown(f"**Total cost: ${sum(costs):.5f}**")
+    for cost in costs:
+        st.sidebar.mardkown(f"- ${cost:.5f}")
+
+# steamlit run app.py
+if __name__ == "__main__":
+    main()
