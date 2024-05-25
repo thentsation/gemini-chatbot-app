@@ -25,7 +25,7 @@ O sistema é configurável e apresenta uma interface amigável, proporcionando u
 1. Clone o repositório:
     ````
     git clone https://github.com/ntsation/chat_llama.git
-    cd chatgpt-personal
+    cd chat_llama
     ````
 
 2. Crie um ambiente virtual:
