@@ -24,7 +24,7 @@ O sistema é configurável e apresenta uma interface amigável, proporcionando u
 # Instalação
 1. Clone o repositório:
     ````
-    git clone https://github.com/seu_usuario/chatgpt-personal.git
+    git clone https://github.com/ntsation/chat_llama.git
     cd chatgpt-personal
     ````
 
