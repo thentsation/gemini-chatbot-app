@@ -1,65 +1,31 @@
-# Chat GPT Pessoal
+# Chatbot com Gemini (Google)
 
-## Visão Geral
-Essa é uma aplicação de chatbot interativa desenvolvida com Streamlit, permitindo aos usuários se comunicar com diferentes modelos de linguagem, como o OpenAI GPT e o Llama2, para obter respostas úteis. 
+Este é um aplicativo de chatbot baseado em texto que utiliza o modelo de linguagem da API Google Generative AI (genai) para gerar respostas a partir das entradas do usuário.
 
-O sistema é configurável e apresenta uma interface amigável, proporcionando uma experiência personalizada.
+## Como usar
 
-## Funcionalidades
- - **Interface Intuitiva**: Interface de usuário baseada em Streamlit.
+1. Instalação:
+   - Certifique-se de ter o Python instalado em sua máquina.
+   - Instale as dependências do projeto executando `pip install -r requirements.txt`.
 
-- **Escolha de Modelos de Linguagem**: Suporte para GPT-3.5, GPT-4 e Llama2.
-- **Gerenciamento de Mensagens**: Histórico de conversas armazenado e exibido na interface.
+2. Configuração da chave da API do Google:
+   - Antes de executar o aplicativo, você precisa obter uma chave da API do Google.
+   - Insira sua chave da API do Google quando solicitado ao executar o aplicativo.
 
-- **Cálculo de Custos**: Monitoramento e exibição do custo das interações com o modelo GPT da OpenAI.
+3. Execução do aplicativo:
+   - Execute o aplicativo com o comando `streamlit run app.py`.
+   - O aplicativo será aberto em seu navegador.
 
-- **Limpeza de Conversas**: Opção para limpar o histórico de mensagens.
+4. Interagindo com o chatbot:
+   - Na interface do aplicativo, digite uma mensagem na caixa de texto.
+   - Clique no botão "Enviar" para enviar sua mensagem.
+   - O chatbot responderá com uma mensagem gerada pelo modelo de linguagem da Google Generative AI.
 
-## Requisitos
-- Python 3.7+
-- Bibliotecas: 
-    - streamlit 
-    - dotenv
-    - langchain
-# Instalação
-1. Clone o repositório:
-    ````
-    git clone https://github.com/ntsation/chat_llama.git
-    cd chat_llama
-    ````
+## Dependências
 
-2. Crie um ambiente virtual:
-    ```python -m venv env
-    source env/bin/activate  # No Windows use `env\Scripts\activate
-    ```
-3. Instale as dependências:
-    ```
-    pip install -r requirements.txt
-    ```
-4. Configure as variáveis de ambiente:
+- streamlit
+- google.generativeai
+- textwrap
+- IPython
 
-    **Crie um arquivo .env na raiz do projeto e adicione suas chaves de API e outras configurações necessárias.**
-
-## Uso
-Execute a aplicação Streamlit:
-```
-streamlit run app.py
-```
-Abra o navegador e acesse: http://localhost
-
-##  Estrutura do Código
-- init_page: Configura a página principal da aplicação.
-- init_messages: Inicializa e gerencia as mensagens da sessão do usuário.
-- select_llm: Permite ao usuário escolher e configurar o modelo de linguagem.
-- get_answer: Processa as mensagens e retorna a resposta gerada pelo modelo.
-- find_role: Identifica o tipo de uma mensagem.
-- convert_langchainschema_to_dict: Converte uma lista de mensagens para uma lista de dicionários.
-- llama_v2_prompt: Converte uma lista de dicionários em um formato compatível com o modelo Llama2.
-- main: Função principal que configura e executa a aplicação.
-
-
-## Modelo 
-Baixar modelo Llama2 para o ambiente local:
-```
-wget https://huggingface.co/localmodels/Llama-2-7B-Chat-ggml/resolve/main/llama-2-7b-chat.ggmlv3.q2_K.bin
-```
+Certifique-se de ter essas dependências instaladas antes de executar o aplicativo.
