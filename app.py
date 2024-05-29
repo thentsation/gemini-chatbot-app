@@ -19,6 +19,7 @@ def setup_sidebar():
         st.sidebar.warning("Por favor, insira sua chave da API do Google.")
         return None
     else:
+        st.sidebar.button('Limpar Chat', on_click=resetar_conversa)
         return google_api_key
 
 def setup_google_api(google_api_key):
@@ -33,6 +34,11 @@ def response_generator(response):
     for word in response.split():
         yield word + " "
         time.sleep(0.05)
+
+def resetar_conversa():
+  st.session_state.conversation = None
+  st.session_state.chat_history = None
+  st.success("Chat limpo com sucesso!")
 
 # Função principal
 def main():
