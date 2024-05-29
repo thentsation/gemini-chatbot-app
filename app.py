@@ -1,5 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
+import time
 
 # Função para obter a resposta do modelo
 def get_answer(prompt):
@@ -22,6 +23,12 @@ def setup_google_api():
         model = genai.GenerativeModel('gemini-1.5-flash')
         return model
 
+def response_generator(response):
+    for word in response.split():
+        yield word + " "
+        time.sleep(0.05)
+
+
 # Função principal
 def main():
     if prompt := st.chat_input("Digite sua mensagem:", key="user_message"):
@@ -32,7 +39,7 @@ def main():
         response = get_answer(prompt)
 
         with st.chat_message("assistant"):
-            st.markdown(response)
+            response = st.write_stream(response_generator(response))
         add_message("ChatGPT", response)
 
 st.title("ChatGemini")
