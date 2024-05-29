@@ -40,7 +40,7 @@ def main():
 
         response = get_answer(prompt)
 
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar="🤖"):
             response = st.write_stream(response_generator(response))
         add_message("ChatGPT", response)
 
