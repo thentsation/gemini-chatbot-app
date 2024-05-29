@@ -11,25 +11,28 @@ def get_answer(prompt):
 def add_message(role, content):
     st.session_state.messages.append({"role": role, "content": content})
 
-# Função para configurar a API do Google e carregar o modelo
-def setup_google_api():
+def setup_sidebar():
     with st.sidebar:
         st.write("### Configurações")
         google_api_key = st.text_input("API do Google:", type="password")
+    if not google_api_key:
+        st.sidebar.warning("Por favor, insira sua chave da API do Google.")
+        return None
+    else:
+        return google_api_key
 
-        if not google_api_key:
-            st.warning("Por favor, insira sua chave da API do Google.")
-            return None
-        else:
-            genai.configure(api_key=google_api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            return model
+def setup_google_api(google_api_key):
+    if google_api_key is not None:
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        return model
+    else:
+        return None
 
 def response_generator(response):
     for word in response.split():
         yield word + " "
         time.sleep(0.05)
-
 
 # Função principal
 def main():
@@ -51,7 +54,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Configurar a API do Google e carregar o modelo
-model = setup_google_api()
+google_api_key = setup_sidebar()
+model = setup_google_api(google_api_key)
 
 # Executar a função principal se o modelo foi configurado com sucesso
 if model:
