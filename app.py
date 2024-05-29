@@ -1,44 +1,49 @@
 import streamlit as st
-import textwrap
-
 import google.generativeai as genai
 
-from IPython.display import Markdown
+# Função para obter a resposta do modelo
+def get_answer(prompt):
+    response = model.generate_content(prompt)
+    return response.text
 
+# Função para adicionar uma mensagem à sessão
+def add_message(role, content):
+    st.session_state.messages.append({"role": role, "content": content})
 
-def to_markdown(text):
-    text = text.replace('•', '  *')
-    return Markdown(textwrap.indent(text, '> ', predicate=lambda _: True))
+# Função para configurar a API do Google e carregar o modelo
+def setup_google_api():
+    google_api_key = st.text_input("Digite sua chave da API do Google:")
 
+    if not google_api_key:
+        st.warning("Por favor, insira sua chave da API do Google.")
+        return None
+    else:
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        return model
 
-# Configurando a chave da API
-google_api_key = st.text_input("Digite sua chave da API do Google:")
+# Função principal
+def main():
+    if prompt := st.chat_input("Digite sua mensagem:", key="user_message"):
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        add_message("user", prompt)
 
-if not google_api_key:
-    st.warning("Por favor, insira sua chave da API do Google.")
-else:
-    # Configurando a chave da API
-    genai.configure(api_key=google_api_key)
+        response = get_answer(prompt)
 
-    model = genai.GenerativeModel('gemini-1.5-flash')
+        with st.chat_message("assistant"):
+            st.markdown(response)
+        add_message("ChatGPT", response)
 
-    st.sidebar.title("Options")
+st.title("ChatGemini")
 
+# Verificar se a sessão de mensagens existe
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    # Obtém a resposta do modelo de linguagem
-    def get_answer(prompt):
-        response = model.generate_content(prompt)
-        return response.text
+# Configurar a API do Google e carregar o modelo
+model = setup_google_api()
 
-
-    # Função principal da aplicação.
-    def main():
-        user_input = st.text_input("Você:", key="user_input")
-
-        if st.button("Enviar"):
-            response = get_answer(user_input)
-            st.write("ChatGPT:", response)
-
-
-    if __name__ == "__main__":
-        main()
+# Executar a função principal se o modelo foi configurado com sucesso
+if model:
+    main()
