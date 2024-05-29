@@ -10,6 +10,7 @@ Este é um aplicativo de chatbot baseado em texto que utiliza o modelo de lingua
 
 2. Configuração da chave da API do Google:
    - Antes de executar o aplicativo, você precisa obter uma chave da API do Google.
+   - Link do Gemini API https://ai.google.dev/
    - Insira sua chave da API do Google quando solicitado ao executar o aplicativo.
 
 3. Execução do aplicativo:
