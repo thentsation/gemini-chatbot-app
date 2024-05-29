@@ -13,15 +13,17 @@ def add_message(role, content):
 
 # Função para configurar a API do Google e carregar o modelo
 def setup_google_api():
-    google_api_key = st.text_input("Digite sua chave da API do Google:")
+    with st.sidebar:
+        st.write("### Configurações")
+        google_api_key = st.text_input("Digite sua chave da API do Google:")
 
-    if not google_api_key:
-        st.warning("Por favor, insira sua chave da API do Google.")
-        return None
-    else:
-        genai.configure(api_key=google_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        return model
+        if not google_api_key:
+            st.warning("Por favor, insira sua chave da API do Google.")
+            return None
+        else:
+            genai.configure(api_key=google_api_key)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            return model
 
 def response_generator(response):
     for word in response.split():
