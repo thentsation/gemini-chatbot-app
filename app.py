@@ -44,7 +44,7 @@ def main():
             response = st.write_stream(response_generator(response))
         add_message("ChatGPT", response)
 
-st.title("ChatGemini")
+st.title("Chat Gemini")
 
 # Verificar se a sessão de mensagens existe
 if "messages" not in st.session_state:
