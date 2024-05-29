@@ -15,7 +15,7 @@ def add_message(role, content):
 def setup_google_api():
     with st.sidebar:
         st.write("### Configurações")
-        google_api_key = st.text_input("Digite sua chave da API do Google:")
+        google_api_key = st.text_input("Digite sua chave da API do Google:", type="password")
 
         if not google_api_key:
             st.warning("Por favor, insira sua chave da API do Google.")
