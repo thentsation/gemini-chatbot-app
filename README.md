@@ -7,6 +7,11 @@ Este é um aplicativo de chatbot baseado em texto que utiliza o modelo de lingua
 1. Instalação:
    - Certifique-se de ter o Python instalado em sua máquina.
    - Instale as dependências do projeto executando `pip install -r requirements.txt`.
+   - Se o Poetry já estiver configurado no seu projeto (arquivos `pyproject.toml` e `poetry.lock` presentes no repositório), você pode instalar as dependências do projeto executando:
+
+     ```bash
+     poetry install
+     ```
 
 2. Configuração da chave da API do Google:
    - Antes de executar o aplicativo, você precisa obter uma chave da API do Google.
