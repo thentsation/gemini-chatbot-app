@@ -1,37 +1,41 @@
-# Chatbot com Gemini (Google)
+# Gemini Chatbot App
 
-Este é um aplicativo de chatbot baseado em texto que utiliza o modelo de linguagem da API Google Generative AI (genai) para gerar respostas a partir das entradas do usuário.
+Gemini Chatbot App is an interactive chat application that uses the Google Generative AI API to generate real-time responses. The project provides a simple and user-friendly interface, allowing users to interact with the language model and provide feedback on the responses received.
 
-## Como usar
+## Features
 
-1. Instalação:
-   - Certifique-se de ter o Python instalado em sua máquina.
-   - Instale as dependências do projeto executando `pip install -r requirements.txt`.
-   - Se o Poetry já estiver configurado no seu projeto (arquivos `pyproject.toml` e `poetry.lock` presentes no repositório), você pode instalar as dependências do projeto executando:
+- **Real-Time Interaction:** Users can send messages and receive instant responses from the model.
+- **Feedback System:** Users can evaluate the usefulness of responses, contributing to the continuous improvement of the model.
+- **Chat Clearing:** Includes a button to clear the chat history, allowing for a fresh start.
 
-     ```bash
-     poetry install
-     ```
+## Prerequisites
 
-2. Configuração da chave da API do Google:
-   - Antes de executar o aplicativo, você precisa obter uma chave da API do Google.
-   - Link do Gemini API <https://ai.google.dev/>
-   - Insira sua chave da API do Google quando solicitado ao executar o aplicativo.
+- Python 3.7 or higher
+- Libraries: `streamlit`, `google-generativeai`
+- A Google API key to access the generative model. You can obtain your key [here](https://ai.google.dev/gemini-api?gad_source=1&gclid=Cj0KCQjwvpy5BhDTARIsAHSilyl3VIxT1c2EvU1dIoh0fmZLMVf6y_9Yacf0ds2OZQ6UYVoBr4jYiZUaAl4mEALw_wcB).
 
-3. Execução do aplicativo:
-   - Execute o aplicativo com o comando `streamlit run app.py`.
-   - O aplicativo será aberto em seu navegador.
+## Installation
 
-4. Interagindo com o chatbot:
-   - Na interface do aplicativo, digite uma mensagem na caixa de texto.
-   - Clique no botão "Enviar" para enviar sua mensagem.
-   - O chatbot responderá com uma mensagem gerada pelo modelo de linguagem da Google Generative AI.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/ntsation/gemini-chatbot-app.git
+   cd gemini-chatbot-app
+   ```
 
-## Dependências
+2. Install the dependencies:
+   ```bash
+   pip install streamlit google-generativeai
+   ```
 
-- streamlit
-- google.generativeai
-- textwrap
-- IPython
+3. Obtain a Google API key and set it in the application.
 
-Certifique-se de ter essas dependências instaladas antes de executar o aplicativo.
+## Usage
+
+1. Start the application:
+   ```bash
+   streamlit run app.py
+   ```
+
+2. Access the application in your browser, usually at `http://localhost:8501`.
+
+3. Enter your API key in the sidebar and start interacting with the chat model.
