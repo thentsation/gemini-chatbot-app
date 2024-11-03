@@ -2,78 +2,66 @@ import streamlit as st
 import google.generativeai as genai
 import time
 
-# Função para obter a resposta do modelo
-
-
-def get_answer(prompt):
-    response = model.generate_content(prompt)
-    return response.text
-
-# Função para adicionar uma mensagem à sessão
-
+def get_answer(model, prompt):
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        st.error(f"Error generating response: {str(e)}")
+        return "Sorry, I couldn't generate a response at this time."
 
 def add_message(role, content):
     st.session_state.messages.append({"role": role, "content": content})
 
-
 def setup_sidebar():
     with st.sidebar:
-        st.write("### Configurações")
-        google_api_key = st.text_input("API do Google:", type="password")
-    if not google_api_key:
-        st.sidebar.warning("Por favor, insira sua chave da API do Google.")
-        return None
-    else:
-        st.sidebar.button('Limpar Chat', on_click=resetar_conversa)
+        st.write("### Settings")
+        google_api_key = st.text_input("Google API Key:", type="password")
+        st.sidebar.button('Clear Chat', on_click=reset_chat)
         return google_api_key
 
-
 def setup_google_api(google_api_key):
-    if google_api_key is not None:
+    if google_api_key:
         genai.configure(api_key=google_api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         return model
-    else:
-        return None
-
+    return None
 
 def response_generator(response):
     for word in response.split():
         yield word + " "
         time.sleep(0.05)
 
+def reset_chat():
+    st.session_state.messages = []
+    st.success("Chat cleared successfully!")
 
-def resetar_conversa():
-    st.session_state.conversation = None
-    st.session_state.chat_history = None
-    st.success("Chat limpo com sucesso!")
+def feedback_system(response):
+    feedback = st.radio("How would you rate the response?", ("Helpful", "Somewhat Helpful", "Not Relevant"))
+    if st.button("Submit Feedback"):
+        st.success("Thank you for your feedback!")
 
-# Função principal
-
-
-def main():
-    if prompt := st.chat_input("Digite sua mensagem:", key="user_message"):
+def main(model):
+    if prompt := st.chat_input("Type your message:", key="user_message"):
         with st.chat_message("user"):
             st.markdown(prompt)
         add_message("user", prompt)
 
-        response = get_answer(prompt)
+        response = get_answer(model, prompt)
 
         with st.chat_message("assistant", avatar="🤖"):
-            response = st.write_stream(response_generator(response))
-        add_message("ChatGPT", response)
+            response_text = st.write_stream(response_generator(response))
+        add_message("assistant", response_text)
 
+        feedback_system(response)
 
-st.title("Chat Gemini")
+st.title("Gemini Chatbot App")
 
-# Verificar se a sessão de mensagens existe
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Configurar a API do Google e carregar o modelo
 google_api_key = setup_sidebar()
 model = setup_google_api(google_api_key)
 
-# Executar a função principal se o modelo foi configurado com sucesso
 if model:
-    main()
+    main(model)
