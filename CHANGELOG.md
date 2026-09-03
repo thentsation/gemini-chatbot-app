@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.5 (2026-09-03)
+
+### Bug Fixes
+
+- Point GHCR_IMAGE at the thentsation org after the repo transfer
+  ([`a0fa10f`](https://github.com/thentsation/gemini-chatbot-app/commit/a0fa10f91f45f23c7e25c19a5db0dff398a47620))
+
+
 ## v1.0.4 (2026-09-03)
 
 ### Bug Fixes
