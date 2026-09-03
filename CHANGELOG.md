@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.4 (2026-09-03)
+
+### Bug Fixes
+
+- Drop GHA layer cache from the GHCR push build
+  ([`40e860e`](https://github.com/thentsation/gemini-chatbot-app/commit/40e860ed1a5798860820b3c8e11b9446e3b9b86c))
+
+
 ## v1.0.3 (2026-09-03)
 
 ### Bug Fixes
