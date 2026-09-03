@@ -1,0 +1,145 @@
+name: Python CI
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+  schedule:
+    - cron: "0 11 * * *" # 08:00 BRT (UTC-3)
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ruff-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install Ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff==0.16.5
+
+      - name: Run Check
+        run: ruff check .
+
+      - name: Check formatting
+        run: ruff format --check .
+
+  pytest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r config/requirements.txt
+          pip install pytest==9.1.1 pytest-cov==7.1.0
+
+      - name: Run tests
+        run: pytest --cov=src --cov-report=term-missing --cov-fail-under=90
+
+  mypy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r config/requirements.txt
+          pip install mypy==2.3.1
+
+      - name: Run type check
+        run: mypy
+
+  streamlit-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r config/requirements.txt
+
+      - name: Start app in background
+        run: |
+          streamlit run src/app.py --server.headless true --server.port 8501 &
+          echo $! > streamlit.pid
+
+      - name: Wait for /_stcore/health
+        run: |
+          for i in $(seq 1 20); do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8501/_stcore/health || echo "000")
+            [ "$CODE" = "200" ] && exit 0
+            echo "Tentativa $i: /_stcore/health respondeu $CODE"
+            sleep 2
+          done
+          echo "App não respondeu 200 a tempo"
+          exit 1
+
+      - name: Stop app
+        if: always()
+        run: kill "$(cat streamlit.pid)" 2>/dev/null || true
+
+  pip-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit==2.7.3
+
+      - name: Audit dependencies
+        run: pip-audit -r config/requirements.lock
