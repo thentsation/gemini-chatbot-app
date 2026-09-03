@@ -45,9 +45,14 @@ def get_chat_session(api_key: str, model: str) -> Chat | None:
     except InvalidAPIKeyError as exc:
         st.session_state.pop('chat_session', None)
         st.session_state.pop('_chat_cache_key', None)
+        st.session_state.pop('_genai_client', None)
         st.error(str(exc))
         return None
 
+    # google-genai closes the Client's underlying HTTP transport once the
+    # Client itself is garbage collected, which breaks this Chat's future
+    # send_message calls. Keep a strong reference alongside the session.
+    st.session_state._genai_client = client
     st.session_state.chat_session = client.chats.create(model=model)
     st.session_state._chat_cache_key = cache_key
     return st.session_state.chat_session
