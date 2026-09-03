@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.0.3 (2026-09-03)
+
+### Bug Fixes
+
+- Keep genai.Client alive alongside its cached Chat session
+  ([`a363e86`](https://github.com/thentsation/gemini-chatbot-app/commit/a363e86a2667d692193a8389cd7eb09dedc408a1))
+
+
 ## v1.0.2 (2026-09-03)
 
 ### Bug Fixes
