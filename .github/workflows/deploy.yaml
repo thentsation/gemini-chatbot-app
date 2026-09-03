@@ -13,7 +13,7 @@ env:
   OCI_COMPARTMENT_ID: ${{ secrets.OCI_COMPARTMENT_ID }}
   OCI_SECURITY_LIST_ID: ${{ secrets.OCI_SECURITY_LIST_ID }}
   OCIR_REPOSITORY: gemini-chatbot-app
-  GHCR_IMAGE: ghcr.io/ntsation/gemini-chatbot-app
+  GHCR_IMAGE: ghcr.io/thentsation/gemini-chatbot-app
   CONTAINER_NAME: gemini-chatbot-app
   HOST_PORT: 8501
 
