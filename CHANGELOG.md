@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.1 (2026-09-05)
+
+### Bug Fixes
+
+- Prune stale image tags left behind on deploy
+  ([`c5895aa`](https://github.com/thentsation/gemini-chatbot-app/commit/c5895aa8f8b081741785329deed20a9efd3b0386))
+
+
 ## v1.1.0 (2026-09-04)
 
 ### Bug Fixes
