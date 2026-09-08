@@ -1,35 +1,28 @@
 🇧🇷 Português | [🇺🇸 English](ARTIGO.en-us.md)
 
-# De protótipo a produto: produtizando um chatbot Streamlit para o Gemini
+# Um chatbot de fim de semana que eu não larguei mais
 
-Como um chatbot de fim de semana — sem testes, sem memória de conversa e rodando numa SDK já deprecada — virou um app com CI/CD completo, deploy automatizado e uma correção que muda o produto de verdade: ele agora lembra da conversa.
+Comecei isso num sábado só pra ver se dava pra colar uma UI no Gemini em uma tarde. Deu. O problema é que só percebi, dias depois, que o chat "esquecia" tudo e rodava em cima de uma biblioteca que a própria Google já tinha abandonado.
 
-## O ponto de partida
+## Por que Streamlit e não outra coisa
 
-O projeto era sete arquivos Streamlit: uma sidebar para colar a API key, um componente de chat, e a chamada para `google-generativeai`. Funcionava para uma demo rápida, mas escondia dois bugs de produto que só aparecem quando alguém realmente usa o app:
+Eu queria a distância mais curta possível entre "tenho uma API key do Gemini" e "tenho uma tela onde conversar com ela". Streamlit resolve isso em sete arquivos: uma sidebar pra colar a chave, um componente de chat, uma chamada pra `google-generativeai`. Rodei, funcionou, fechei o notebook satisfeito. Só fui usar o app de verdade — mandando mais de uma mensagem seguida — alguns dias depois.
 
-1. **O histórico desaparecia.** `st.session_state.messages` era populado a cada mensagem, mas nada no topo do app percorria essa lista para re-desenhá-la. A cada rerun do Streamlit — que acontece a cada interação — só a última troca ficava visível na tela. Um chat que "esquecia" visualmente tudo antes da última mensagem.
-2. **O chat não tinha memória nenhuma.** Cada pergunta virava uma chamada isolada a `model.generate_content(prompt)`. O modelo nunca via as mensagens anteriores — a UI parecia uma conversa contínua, mas por trás cada resposta partia do zero.
+## Os dois bugs que só aparecem quando você usa o próprio app
 
-Além disso: zero testes, zero CI, `requirements.txt` sem versão fixa (com `IPython` listado e nunca usado em lugar nenhum), e — a descoberta mais relevante do processo — a biblioteca usada, `google-generativeai`, está oficialmente marcada como `Development Status :: 7 - Inactive` no PyPI. O próprio README dela recomenda migrar para o `google-genai`.
+Nenhum dos dois derrubava o processo. Nenhum aparecia nos logs. Só apareciam se eu, como usuário, tentasse ter uma conversa de verdade.
 
-Este artigo é o caminho de lá até um app com cara de produto.
+**O histórico sumia visualmente.** `st.session_state.messages` recebia cada mensagem nova certinho, mas nada no topo do app percorria essa lista pra redesenhar as anteriores. Como o Streamlit reexecuta o script inteiro a cada interação, só a última troca ficava na tela — um chat que esquecia tudo antes da penúltima linha, mesmo com o dado intacto por trás.
 
-## Primeira parada: consertar o que já existia
+**O chat não tinha memória nenhuma.** Isso era mais grave: cada pergunta virava uma chamada isolada a `model.generate_content(prompt)`. Visualmente parecia uma conversa; para o modelo, cada resposta nascia do zero, sem nenhuma pergunta anterior no contexto.
 
-Antes de qualquer feature nova, os dois bugs.
+A correção do primeiro bug é do tipo fácil de esquecer: no topo de `chat_interface`, percorrer `st.session_state.messages` e redesenhar cada uma com `st.chat_message` antes de processar entrada nova, e fechar com um `st.rerun()` explícito depois de qualquer resposta — a mensagem recém-gerada some do render "ao vivo" e reaparece, com o widget de feedback junto, vinda do loop de histórico. Um caminho de renderização só, sem lógica duplicada.
 
-### Histórico de verdade
+Para a memória, resisti à tentação de montar manualmente uma lista de turnos e reenviar tudo a cada chamada — o SDK já resolve isso. `client.chats.create(model=...)` devolve um objeto `Chat` que guarda o histórico internamente; bastou guardar essa sessão em `st.session_state` e trocar `generate_content` por `chat.send_message()`. A sessão só é recriada quando a chave ou o modelo mudam, então trocar de modelo no meio da conversa reseta de forma limpa em vez de misturar contexto de modelos diferentes.
 
-A correção é simples de descrever e fácil de esquecer: no topo de `chat_interface`, percorrer `st.session_state.messages` e redesenhar cada mensagem com `st.chat_message` antes de processar uma nova entrada. Depois de qualquer resposta nova, um `st.rerun()` explícito normaliza o estado — a mensagem que acabou de ser gerada some da renderização "ao vivo" e reaparece, junto com o widget de feedback, vinda do loop de histórico. Um único caminho de renderização, sem duplicação de lógica.
+## Descobri no meio do caminho que a SDK estava morta
 
-### Memória via SDK, não reinventada
-
-A tentação seria montar manualmente uma lista de turnos e reenviá-la a cada chamada. Mas o próprio SDK já resolve isso: `client.chats.create(model=...)` devolve um objeto `Chat` que mantém o histórico internamente — bastava guardar essa sessão em `st.session_state` e trocar `generate_content` por `chat.send_message()`. A sessão é recriada só quando a chave ou o modelo mudam, então trocar de modelo no meio da conversa reinicia de forma limpa em vez de misturar contextos.
-
-### A migração de SDK que não estava no plano original
-
-Ao pesquisar a API de chat multi-turn, o PyPI do `google-generativeai` mostrou o aviso de descontinuação. Trocar de SDK no meio de uma produtização não seria imediato se a API fosse muito diferente — mas o guia oficial de migração mostra que a troca é quase mecânica:
+Pesquisando como funcionava a API de chat multi-turn, esbarrei no aviso no PyPI: `google-generativeai` está marcado `Development Status :: 7 - Inactive`, com o próprio README recomendando migrar para `google-genai`. Não estava nos meus planos trocar de SDK no meio da produtização, mas o guia oficial de migração mostra que é quase mecânico:
 
 ```python
 # antes (google-generativeai, deprecado)
@@ -44,35 +37,28 @@ chat = client.chats.create(model='gemini-3.8-flash')
 chat.send_message(prompt)
 ```
 
-Junto da troca, os modelos disponíveis também mudaram — a geração 3.x (`gemini-3.8-flash`, `gemini-3.1-pro-preview`) já convive com a 2.5, então o seletor de modelo na sidebar oferece as duas gerações.
+De brinde, os modelos disponíveis também tinham mudado — a geração 3.x (`gemini-3.8-flash`, `gemini-3.1-pro-preview`) já convive com a 2.5, então deixei o seletor da sidebar oferecer as duas.
 
-## As features: dar cara de produto ao app
+## Dando cara de produto ao que era um script
 
-Com a base corrigida, o resto foi fechar lacunas que separam um protótipo de algo publicável.
+Com os dois bugs resolvidos, o resto foi fechar as lacunas que separam "funciona pra mim" de algo que eu mandaria pra outra pessoa usar:
 
-- **Seletor de modelo.** Um `st.selectbox` na sidebar com quatro opções, do mais rápido ao de maior qualidade — trocar de modelo recria a sessão de chat automaticamente.
-- **BYOK com feedback imediato.** A chave continua sendo colada pelo visitante (nada fica salvo no servidor), mas agora é validada assim que configurada — uma chamada leve a `client.models.list()` — em vez de só falhar silenciosamente na primeira mensagem. Se `GOOGLE_API_KEY` estiver definida no ambiente, a sidebar pula o campo e mostra um aviso de "chave do servidor".
-- **Erros que fazem sentido.** `APIError` do SDK é traduzido para mensagens específicas por código HTTP — chave inválida, modelo indisponível, cota excedida — em vez de um `RuntimeError` genérico.
-- **Feedback que persiste.** O sistema de feedback original nem tinha `key` nos widgets — ao renderizar mais de uma mensagem, os widgets colidiriam. Agora cada mensagem tem sua própria avaliação, guardada em `st.session_state.feedback_log` com timestamp, e reaparece como legenda ao rolar o histórico.
-- **Título e ícone na aba.** Um detalhe pequeno que faltava por completo: `st.set_page_config` nunca era chamado.
+- **Seletor de modelo** — `st.selectbox` na sidebar, do mais rápido ao de maior qualidade, recriando a sessão de chat automaticamente ao trocar.
+- **BYOK que avisa na hora, não só na primeira mensagem.** A chave continua sendo colada pelo visitante (nada fica salvo no servidor), mas agora uma chamada leve a `client.models.list()` valida assim que ela é configurada. Se `GOOGLE_API_KEY` já estiver no ambiente, a sidebar nem pede — mostra um aviso de "chave do servidor".
+- **Erros que dizem algo útil.** `APIError` do SDK vira mensagem específica por código HTTP — chave inválida, modelo indisponível, cota excedida — em vez de um `RuntimeError` genérico que eu mesmo teria que debugar depois.
+- **Feedback que sobrevive ao próximo turno.** Os widgets de feedback originais nem tinham `key` — com mais de uma mensagem na tela, colidiam entre si. Agora cada mensagem guarda sua avaliação em `st.session_state.feedback_log`, com timestamp, e reaparece como legenda ao rolar o histórico.
+- **Título e ícone na aba.** `st.set_page_config` simplesmente nunca tinha sido chamado.
 
-## Testando um app Streamlit de verdade
+## Testando Streamlit sem inventar moda
 
-Testar UI costuma ser o ponto fraco de protótipos assim. A saída não foi mockar tudo manualmente — o próprio Streamlit expõe `streamlit.testing.v1.AppTest`, que executa o app inteiro (sem subir servidor) e permite interagir com os widgets como um usuário faria. Com o SDK do Gemini trocado por um fake na fixture do pytest, dá para simular a jornada completa: configurar a chave, mandar duas mensagens seguidas e confirmar que a primeira continua na tela (o teste que teria pego o bug 1 direto), dar feedback numa resposta e confirmar que sobrevive a um novo turno, e verificar que um erro de API não corrompe o histórico.
+Testar UI costuma ser onde eu relaxo em projeto pessoal — e é exatamente onde os dois bugs originais estavam escondidos. Em vez de mockar tudo manualmente, usei `streamlit.testing.v1.AppTest`, que roda o app inteiro sem subir servidor e permite interagir com os widgets como um usuário faria. Com o SDK trocado por um fake na fixture do pytest, dá pra simular a jornada completa: configurar a chave, mandar duas mensagens seguidas e confirmar que a primeira continua na tela (o teste que teria pego o bug do histórico de cara), dar feedback numa resposta e confirmar que ele sobrevive a um novo turno, verificar que um erro de API não corrompe nada.
 
-Complementando, testes unitários isolados cobrem `config.py` (fallback de variável de ambiente), `services/response.py` e `services/google_api.py` (mapeamento de erros e cache de sessão) e `utils/state_manager.py`.
+Por baixo disso, testes unitários isolados cobrem `config.py` (fallback de variável de ambiente), `services/response.py` e `services/google_api.py` (mapeamento de erros e cache de sessão) e `utils/state_manager.py`.
 
-## Lições
+## O que fica desse projeto
 
-1. **Bug de produto nem sempre é bug de código.** As duas falhas mais importantes aqui não geravam exceção nenhuma — o app "funcionava". Só ficavam óbvias usando o chat como um usuário usaria, mensagem após mensagem.
-2. **Verificar a saúde da dependência é parte do trabalho.** Nenhuma documentação antiga avisaria que `google-generativeai` virou "Inactive" — só apareceu ao consultar o próprio PyPI durante a migração de API de chat.
-3. **Testar Streamlit não precisa de Selenium.** `AppTest` roda em milissegundos e testa comportamento real de rerun — exatamente a categoria de bug que testes unitários isolados não pegam.
-4. **BYOK bem feito é UX, não só segurança.** Validar a chave no momento em que ela é configurada, e não só na primeira mensagem, evita que o visitante escreva um parágrafo só para descobrir que colou a chave errada.
+Bug de produto nem sempre é bug de código — os dois problemas mais sérios aqui nunca lançaram uma exceção; só ficavam óbvios usando o chat como alguém usaria de verdade, mensagem após mensagem. E verificar a saúde de uma dependência virou hábito depois disso: nenhuma documentação antiga ia me avisar que a biblioteca tinha virado "Inactive" — só descobri consultando o PyPI enquanto pesquisava outra coisa. `AppTest` também me convenceu de que testar Streamlit não precisa de Selenium nem de fingir que é E2E — roda em milissegundos e pega exatamente esse tipo de bug de rerun que teste unitário isolado não vê.
 
-## Estado final
+## Como o repositório está hoje
 
-- 28 testes, 100% de cobertura em `src/`, threshold de 90% bloqueando no CI
-- ruff (lint + format) e mypy (`disallow_untyped_defs`) limpos, rodando a cada push
-- CI em matrix de Python, smoke test real do Streamlit (`/_stcore/health`), imagem Docker escaneada com Trivy e publicada no GHCR
-- Versionamento automático via `python-semantic-release` — toda mudança em `main` vira uma tag e uma entrada no `CHANGELOG.md`
-- Deploy automatizado: build → GHCR → espelhamento para OCIR → SSH na instância → smoke test HTTP
+28 testes, 100% de cobertura em `src/`, com threshold de 90% bloqueando no CI. `ruff` (lint + format) e `mypy` (`disallow_untyped_defs`) limpos a cada push, rodando em matrix de Python. O pipeline faz um smoke test real do Streamlit (`/_stcore/health`), escaneia a imagem Docker com Trivy antes de publicar no GHCR, versiona sozinho via `python-semantic-release` (toda mudança na `main` vira tag e entrada no `CHANGELOG.md`), e termina com deploy automatizado: build → GHCR → espelhamento para OCIR → SSH na instância → smoke test HTTP.
