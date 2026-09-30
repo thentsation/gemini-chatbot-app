@@ -7,8 +7,6 @@ on:
   pull_request:
     paths-ignore:
       - '**.md'
-  schedule:
-    - cron: "0 11 * * *" # 08:00 BRT (UTC-3)
   release:
     types: [published]
 
