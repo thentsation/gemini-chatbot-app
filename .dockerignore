@@ -10,7 +10,6 @@ __pycache__
 .env
 .idea
 .vscode
-tests
 *.md
 Makefile
 docker-compose.yml
