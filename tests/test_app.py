@@ -47,15 +47,10 @@ class _FakeClient:
         self.chats = _FakeChats(fail=fail)
 
 
-# O padrão do AppTest (3 s por run) estoura no CI quando o agente está com vários builds
-# em paralelo; o app em si responde em milissegundos.
-APP_TIMEOUT = 30
-
-
 @pytest.fixture
 def app(monkeypatch: pytest.MonkeyPatch) -> AppTest:
     monkeypatch.setattr('google.genai.Client', _FakeClient)
-    at = AppTest.from_file('../src/app.py', default_timeout=APP_TIMEOUT)
+    at = AppTest.from_file('../src/app.py')
     at.run()
     return at
 
@@ -65,7 +60,7 @@ def app_with_failing_model(monkeypatch: pytest.MonkeyPatch) -> AppTest:
     monkeypatch.setattr(
         'google.genai.Client', lambda api_key=None: _FakeClient(api_key, fail=True)
     )
-    at = AppTest.from_file('../src/app.py', default_timeout=APP_TIMEOUT)
+    at = AppTest.from_file('../src/app.py')
     at.run()
     return at
 
@@ -136,7 +131,7 @@ def test_server_provisioned_api_key_skips_input(
     monkeypatch.setattr('google.genai.Client', _FakeClient)
     monkeypatch.setenv('GOOGLE_API_KEY', 'server-key')
 
-    at = AppTest.from_file('../src/app.py', default_timeout=APP_TIMEOUT)
+    at = AppTest.from_file('../src/app.py')
     at.run()
 
     assert not at.exception
