@@ -2,6 +2,10 @@
 
 # Gemini Chatbot App
 
+[![Python CI](https://github.com/ntsation/gemini-chatbot-app/actions/workflows/pipeline_python.yaml/badge.svg)](https://github.com/ntsation/gemini-chatbot-app/actions/workflows/pipeline_python.yaml)
+[![Docker CI/CD](https://github.com/ntsation/gemini-chatbot-app/actions/workflows/pipeline_docker.yaml/badge.svg)](https://github.com/ntsation/gemini-chatbot-app/actions/workflows/pipeline_docker.yaml)
+[![Release](https://github.com/ntsation/gemini-chatbot-app/actions/workflows/release.yaml/badge.svg)](https://github.com/ntsation/gemini-chatbot-app/actions/workflows/release.yaml)
+
 Um chatbot em Streamlit para os modelos Gemini do Google, com memória de conversa de verdade, seletor de modelo, feedback por mensagem e um fluxo "traga sua própria chave" para que qualquer pessoa possa testar sem que você pague pelo uso alheio.
 
 > Artigo completo (a jornada de protótipo a produto) em [Português](ARTIGO.md) / [English](ARTIGO.en-us.md).
@@ -42,7 +46,7 @@ make docker-build
 make docker-run
 ```
 
-A imagem é multi-stage (runtime não-root) e tem `HEALTHCHECK` contra o próprio endpoint `/_stcore/health` do Streamlit. O `docker-compose.yml` é o compose de produção usado pelo Jenkins (labels do Traefik, sem portas publicadas, `GOOGLE_API_KEY` vinda de `/opt/apps/gemini-chatbot-app/.env` no servidor).
+Ou via Compose: `docker compose up --build`. A imagem é multi-stage (runtime não-root), tem `HEALTHCHECK` contra o próprio endpoint `/_stcore/health` do Streamlit, e é escaneada com **Trivy** e publicada no **GHCR** a cada push em `main`.
 
 ## Configuração
 
@@ -68,14 +72,13 @@ Os testes incluem unitários por módulo e um teste de ponta a ponta usando o ut
 ├── src/                   # código do app (components/services/utils + entrypoint)
 ├── tests/                 # testes unitários + smoke test do app inteiro via AppTest
 ├── config/                # requirements pinados + lockfile
-└── docker/                # Dockerfile
+├── docker/                # Dockerfile
+└── .github/workflows/     # CI, build+scan+publish do Docker, release, deploy
 ```
 
 ## CI/CD
 
-CI e deploy rodam no Jenkins da plataforma (`Jenkinsfile` → `appPipeline` da Shared Library `platform`, repo devops-platform), disparados por webhooks. Sem GitHub Actions.
-
-- **PRs e branches** — validação do contrato; `docker build --target test` (`ruff check`, `ruff format --check`, `mypy`, `pytest` com cobertura ≥90% em Python 3.11 e 3.12, app Streamlit exercitado de ponta a ponta pelo `AppTest`, versões das ferramentas no `config/requirements-dev.txt`); `pip-audit` no `config/requirements.lock`; Trivy (CRITICAL/HIGH) na imagem de runtime.
-- **main** — tudo acima e depois build, smoke test, push para o OCIR, deploy atrás do Traefik em https://gemini-chatbot.137-131-175-7.sslip.io com rollback automático, release com o python-semantic-release (versão, CHANGELOG, tag e release no GitHub) e rebuild do portfolio. Também é reconstruída toda segunda para pegar patches de segurança.
-- **Dependências** — Renovate (job `platform/renovate` no Jenkins, `renovate.json` → preset do devops-platform): atualizações diárias, manutenção semanal do lockfile, issue "Dependency Dashboard" e auto-merge de patch/minor depois que o Jenkins aprova.
-
+- **CI**: ruff (lint + format), mypy (estrito), pytest em matrix (3.11/3.12) com threshold de cobertura, smoke test real do Streamlit, e `pip-audit` contra o lockfile.
+- **Release**: `python-semantic-release` cria uma nova tag e atualiza o `CHANGELOG.md` automaticamente a cada push em `main`.
+- **Docker**: build multi-arch, scan com Trivy, publicação no GHCR com tags `latest`/semver/sha.
+- **Deploy**: após um build Docker bem-sucedido em `main`, a imagem é implantada automaticamente em um container de longa duração.

@@ -1,35 +1,11 @@
 services:
   app:
-    image: ${APP_IMAGE:-gru.ocir.io/grun5vjqis7z/gemini-chatbot-app:latest}
-    pull_policy: missing
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     container_name: gemini-chatbot-app
     restart: unless-stopped
-    expose:
-      - '8501'
     env_file:
-      - path: ${APP_ENV_FILE:-.env}
-        required: false
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4).status == 200 else 1)"
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
-    networks:
-      - proxy
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=${PROXY_NETWORK:-proxy}
-      - traefik.http.routers.gemini-chatbot-app.rule=Host(`gemini-chatbot.137-131-175-7.sslip.io`)
-      - traefik.http.routers.gemini-chatbot-app.entrypoints=websecure
-      - traefik.http.routers.gemini-chatbot-app.tls.certresolver=letsencrypt
-      - traefik.http.services.gemini-chatbot-app.loadbalancer.server.port=8501
-
-networks:
-  proxy:
-    name: ${PROXY_NETWORK:-proxy}
-    external: true
+      - .env
+    ports:
+      - '8501:8501'
