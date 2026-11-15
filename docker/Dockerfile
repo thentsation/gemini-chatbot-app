@@ -15,9 +15,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
 
 COPY --from=builder /install /usr/local
 
-RUN pip install --no-cache-dir --upgrade setuptools
+RUN pip install --no-cache-dir --upgrade pip setuptools
 
-RUN rm -rf /usr/local/lib/python3.14/ensurepip
+RUN rm -rf /usr/local/lib/python3.*/ensurepip
 
 RUN useradd --create-home appuser
 
