@@ -7,7 +7,7 @@ annotated-types==0.8.0
 anyio==4.16.0
     # via
     #   google-genai
-    #   httpx
+    #   httpx2
     #   starlette
     #   streamlit
 attrs==26.1.0
@@ -15,10 +15,7 @@ attrs==26.1.0
     #   jsonschema
     #   referencing
 certifi==2026.10.23
-    # via
-    #   httpcore
-    #   httpx
-    #   requests
+    # via requests
 cffi==2.1.1 ; platform_python_implementation != 'PyPy'
     # via cryptography
 charset-normalizer==3.5.2
@@ -31,22 +28,24 @@ cryptography==50.0.2
     # via google-auth
 distro==1.9.0
     # via google-genai
-google-auth==2.62.1
+google-auth==2.62.2
     # via google-genai
-google-genai==2.33.0
+google-genai==3.0.0
     # via -r config/requirements.txt
 h11==0.16.0
     # via
-    #   httpcore
+    #   httpcore2
     #   uvicorn
-httpcore==1.0.9
-    # via httpx
-httpx==0.28.1
+httpcore2==2.16.2 ; sys_platform != 'emscripten'
+    # via httpx2
+httpx2==2.16.2
     # via google-genai
+httpx2-jsfetch==1.0 ; python_full_version >= '3.12' and sys_platform == 'emscripten'
+    # via httpx2
 idna==3.20
     # via
     #   anyio
-    #   httpx
+    #   httpx2
     #   requests
 itsdangerous==2.2.0
     # via streamlit
@@ -67,7 +66,7 @@ numpy==2.4.6 ; python_full_version < '3.12'
     #   pandas
     #   pydeck
     #   streamlit
-numpy==2.5.4 ; python_full_version >= '3.12'
+numpy==2.5.5 ; python_full_version >= '3.12'
     # via
     #   pandas
     #   pydeck
@@ -98,7 +97,7 @@ pydeck==0.9.3
     # via streamlit
 python-dateutil==4.0.0
     # via pandas
-python-multipart==0.0.33
+python-multipart==0.0.34
     # via streamlit
 referencing==0.37.0
     # via
@@ -121,11 +120,16 @@ streamlit==1.67.0
     # via -r config/requirements.txt
 tenacity==9.1.4
     # via google-genai
+truststore==0.10.5 ; sys_platform != 'emscripten'
+    # via
+    #   httpcore2
+    #   httpx2
 typing-extensions==4.16.0
     # via
     #   altair
     #   anyio
     #   google-genai
+    #   httpx2
     #   pydantic
     #   pydantic-core
     #   referencing
