@@ -1,0 +1,143 @@
+# The Gemini chatbot as a Telvax service: src/app.py and its components. The page (page.html) is plain HTML and
+# JavaScript instead of Streamlit; the chat, its memory, the model picker, the streamed answer, the errors and the
+# feedback are the same. Run it with `telvax serve src/main.tvx --live` (without --live the model is an offline
+# stand-in that quotes the question).
+import std.http.Request
+import std.http.Response
+import std.http.Sink
+import std.http.Status
+from std.ai.llm import OpenAIClient
+from config import APP_TITLE, APP_ICON, available_models, default_model, env_api_key, base_url
+from errors import describe, EMPTY_ANSWER
+from sessions import Message, Feedback, RATING_OPTIONS, messages, add_message, memory_for, reset, feedback_of, rate
+
+serve:
+    log_format: "json"
+    security_headers: True
+
+let PAGE = std.fs.embed("page.html")
+let COOKIE = "gemini_sid"
+
+type ChatIn:
+    message: Text
+    model: Text = ""
+    api_key: Text = ""
+
+type Shown:
+    role: Text
+    content: Text
+    rating: Text?
+
+type State:
+    title: Text
+    icon: Text
+    models: List[Text]
+    default_model: Text
+    server_key: Bool
+    ratings: List[Text]
+    messages: List[Shown]
+
+type Delta:
+    text: Text
+
+type Done:
+    index: Int
+
+type RateIn:
+    index: Int
+    rating: Text
+
+type Cleared:
+    message: Text
+
+# The session id of the cookie, and whether it is new (then the answer sets the cookie).
+fn session(req: Request) -> (Text, Bool):
+    match req.header("cookie"):
+        case Some(cookies):
+            for part in cookies.split(";"):
+                let p = part.trim()
+                if p.starts_with(COOKIE + "="):
+                    let sid = p.slice(COOKIE.chars().len() + 1, p.chars().len())
+                    if sid.chars().len() == 32:
+                        return (sid, False)
+        case None:
+            pass
+    (std.random.uuid(), True)
+
+fn with_cookie(r: Response, sid: Text, new: Bool) -> Response:
+    r.header("set-cookie", f"{COOKIE}={sid}; Path=/; HttpOnly; SameSite=Lax") if new else r
+
+@endpoint(GET, "/")
+fn index(req: Request) -> Result[Response, Status]:
+    let (sid, new) = session(req)
+    Ok(with_cookie(Response.html(PAGE), sid, new))
+
+# What the page shows: the models, whether the server has a key, and the conversation with its ratings.
+@endpoint(GET, "/api/state")
+fn state(req: Request) -> Result[Response, Status]:
+    let (sid, new) = session(req)
+    let ratings = feedback_of(sid)
+    var shown: List[Shown] = []
+    var i = 0
+    for m in messages(sid):
+        shown.push(Shown(role: m.role, content: m.content, rating: rating_of(ratings.get(f"{i}"))))
+        i = i + 1
+    let s = State(title: APP_TITLE, icon: APP_ICON, models: available_models(), default_model: default_model(), server_key: env_api_key().is_some(), ratings: RATING_OPTIONS, messages: shown)
+    Ok(with_cookie(Response.new(s), sid, new))
+
+fn rating_of(f: Feedback?) -> Text?:
+    match f:
+        case Some(x):
+            Some(x.rating)
+        case None:
+            None
+
+# A message to the model: the answer comes as server-sent events, `data: {"text": ...}` for each piece, then
+# `event: done` (with the index of the answer, for its feedback) or `event: error` with the message to show.
+@endpoint(POST, "/api/chat")
+fn chat(input: ChatIn, req: Request) -> Result[Response, Status]:
+    let (sid, new) = session(req)
+    let prompt = input.message.trim()
+    if prompt.is_empty():
+        return Err(Status.BadRequest("Digite sua mensagem."))
+    let model = default_model() if input.model.is_empty() else input.model
+    if not available_models().contains(model):
+        return Err(Status.BadRequest(f"model must be one of: {std.text.join(available_models(), ", ")}"))
+    let key = env_api_key().unwrap_or(input.api_key.trim())
+    if key.is_empty():
+        return Err(Status.BadRequest("Adicione sua Google API Key na barra lateral para começar a conversar."))
+    let turns = memory_for(sid, key, model)
+    add_message(sid, "user", prompt)
+    let client = OpenAIClient.new(model).with_base_url(base_url()).with_key(key)
+    fn produce(sink: Sink):
+        let asked = turns.take(turns.len())
+        asked.push(("user", prompt))
+        match client.stream(asked, (piece: Text) => sink.send(Delta(text: piece))):
+            case Ok(reply):
+                if reply.text().trim().is_empty():
+                    sink.event("error", EMPTY_ANSWER)
+                else:
+                    turns.push(("user", prompt))
+                    turns.push(("assistant", reply.text()))
+                    add_message(sid, "assistant", reply.text())
+                    sink.event("done", std.json.stringify(Done(index: std.math.to_int(messages(sid).len()) - 1)))
+            case Err(e):
+                sink.event("error", describe(e))
+    Ok(with_cookie(Response.events(produce), sid, new))
+
+# reset_chat.
+@endpoint(DELETE, "/api/chat")
+fn clear(req: Request) -> Result[Response, Status]:
+    let (sid, new) = session(req)
+    reset(sid)
+    Ok(with_cookie(Response.new(Cleared(message: "Conversa reiniciada.")), sid, new))
+
+# feedback_system: rate an answer.
+@endpoint(POST, "/api/feedback")
+fn give_feedback(input: RateIn, req: Request) -> Result[Response, Status]:
+    let (sid, new) = session(req)
+    match rate(sid, input.index, input.rating):
+        case Ok(f):
+            Ok(with_cookie(Response.new(f), sid, new))
+        case Err(e):
+            Err(Status.BadRequest(e))

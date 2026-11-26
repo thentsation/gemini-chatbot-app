@@ -1,0 +1,31 @@
+name: Telvax
+
+on:
+  pull_request:
+  push:
+    branches: [main, feat/telvax]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telvax
+    steps:
+      - uses: actions/checkout@v7
+      # The chat client with streaming (std.ai.llm) is in the develop branch of Telvax, not yet in a release. Once a
+      # release has it, this becomes the install script of Telvax.
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - name: Telvax from develop
+        working-directory: .
+        run: cargo install --locked --git https://github.com/telvax/telvax --branch develop telvax_cli telvax_pkg
+      - name: Check, format and unit tests
+        run: |
+          for f in src/*.tvx; do telvax check "$f"; telvax fmt --check "$f"; done
+          for f in src/*_test.tvx; do telvax test "$f"; done
+      - name: The service against a stand-in for Gemini
+        run: sh tests/e2e.sh

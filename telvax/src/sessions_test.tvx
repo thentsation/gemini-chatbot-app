@@ -1,0 +1,36 @@
+# tests/test_state_manager.py and the chat session of test_google_api.py.
+from sessions import messages, add_message, memory_for, reset, rate, feedback_of
+
+fn test_messages_are_kept_per_session():
+    add_message("a" * 32, "user", "oi")
+    add_message("b" * 32, "user", "olá")
+    assert_eq(messages("a" * 32).len(), 1)
+    assert_eq(messages("b" * 32).get(0).unwrap().content, "olá")
+
+fn test_a_new_key_or_model_starts_a_new_chat_session():
+    let sid = "c" * 32
+    memory_for(sid, "k1", "gemini-3.8-flash").push(("user", "oi"))
+    assert_eq(memory_for(sid, "k1", "gemini-3.8-flash").len(), 1)
+    assert_eq(memory_for(sid, "k1", "gemini-2.5-flash").len(), 0)
+    memory_for(sid, "k1", "gemini-2.5-flash").push(("user", "oi"))
+    assert_eq(memory_for(sid, "k2", "gemini-2.5-flash").len(), 0)
+
+fn test_only_answers_get_one_of_the_three_ratings():
+    let sid = "d" * 32
+    add_message(sid, "user", "oi")
+    add_message(sid, "assistant", "olá")
+    assert(rate(sid, 0, "Útil").is_err())
+    assert(rate(sid, 1, "Ótimo").is_err())
+    assert(rate(sid, 9, "Útil").is_err())
+    assert_eq(rate(sid, 1, "Parcialmente útil").unwrap().rating, "Parcialmente útil")
+    assert_eq(feedback_of(sid).len(), 1)
+
+fn test_reset_clears_messages_feedback_and_memory():
+    let sid = "e" * 32
+    add_message(sid, "assistant", "olá")
+    rate(sid, 0, "Útil").unwrap()
+    memory_for(sid, "k", "m").push(("user", "oi"))
+    reset(sid)
+    assert(messages(sid).is_empty())
+    assert(feedback_of(sid).is_empty())
+    assert(memory_for(sid, "k", "m").is_empty())

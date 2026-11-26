@@ -66,6 +66,46 @@ make coverage     # pytest with coverage report
 
 Tests include unit tests per module plus an end-to-end smoke test using Streamlit's own `AppTest` utility, which drives the whole app (sidebar, chat input, feedback, clear-chat) with the `google-genai` SDK faked out — no real API key or network call needed.
 
+## Telvax version
+
+`telvax/` has the same chat written in [Telvax](https://github.com/telvax/telvax), as one service:
+* **The page** (`src/page.html`, built into the binary) is plain HTML and JavaScript instead of Streamlit. It has the same
+  sidebar (the key or the notice of the server's key, the model picker, clearing the chat), the messages, the "Pensando..."
+  wait, and the rating of each answer.
+* **The chat** goes to Gemini's OpenAI-compatible endpoint with the chat client of Telvax's standard library.
+  * The answer is streamed to the page piece by piece as server-sent events, as the model writes it; the Streamlit app
+    streams a finished answer word by word.
+  * Each browser session keeps its messages and the model's memory in the server's memory, with a cookie.
+  * A new key or model starts a new memory, as the app recreates its Gemini chat session.
+  * The errors are the messages of the app.
+* **The key** is `GOOGLE_API_KEY` on the server, or the one a visitor pastes. That one is kept only in the page and sent
+  with each message, never written to disk or to a log.
+
+```sh
+cd telvax
+GOOGLE_API_KEY=... telvax serve src/main.tvx --live          # http://localhost:8080
+telvax serve src/main.tvx                                    # offline: a stand-in model that quotes the question
+telvax build --serve src/main.tvx -o gemini-chatbot          # one binary with the page
+```
+
+`GEMINI_BASE_URL` points the service at another OpenAI-compatible server.
+
+**Tests.** `telvax test src/errors_test.tvx` and `src/sessions_test.tvx` cover the messages, the sessions, the memory of a
+key and model, the ratings and clearing. `sh tests/e2e.sh` runs the service against `tests/fake_gemini.py`, a stand-in for
+Gemini's endpoint, and checks over HTTP:
+* the streamed pieces, and the history sent back to the model;
+* the model picker, and a new memory for a new model;
+* the three errors (key, model, quota) and the missing key;
+* the ratings and clearing;
+* the key of the server, and the offline mode.
+
+`.github/workflows/telvax.yml` runs both.
+
+**Differences from the Streamlit app**
+* **The key is not checked when it is entered:** a wrong key is reported at the first message instead (the app lists the
+  models first).
+* **No Markdown:** answers are shown as plain text with their line breaks, not as Markdown.
+
 ## Repository structure
 
 ```

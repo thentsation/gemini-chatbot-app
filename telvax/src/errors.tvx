@@ -1,0 +1,18 @@
+# src/services/google_api.py `describe_api_error` and src/services/response.py: an error of the API as a message a chat
+# user can act on, in the words of the Python app.
+from std.ai.llm import LlmError
+
+fn describe(e: LlmError) -> Text:
+    describe_kind(e.kind(), e.message())
+
+# 400, 401 and 403 are a key problem, 404 a model that is not there, 429 the quota (the kinds of std.ai.llm).
+fn describe_kind(kind: Text, message: Text) -> Text:
+    if kind == "invalid_key" or kind == "bad_request":
+        return "Chave de API inválida ou sem permissão para este modelo. Verifique a chave e tente novamente."
+    if kind == "model_not_found":
+        return "Modelo indisponível no momento. Tente selecionar outro modelo na barra lateral."
+    if kind == "rate_limit":
+        return "Cota da API excedida. Aguarde um pouco ou utilize outra chave."
+    f"Erro ao comunicar com a API do Gemini: {message}"
+
+let EMPTY_ANSWER = "O modelo não retornou uma resposta em texto para esta mensagem."

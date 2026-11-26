@@ -1,0 +1,6 @@
+[package]
+name = "gemini_chatbot"
+version = "0.1.0"
+edition = "2026"
+description = "A chat with Gemini: the Telvax version of this repository's Streamlit app"
+entry = "src/main.tvx"

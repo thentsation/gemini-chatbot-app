@@ -1,0 +1,85 @@
+# src/utils/state_manager.py and the chat session of google_api.py: what each browser session keeps, in memory only (the
+# key is never written to disk or to a log). The shared maps are keyed by the session id of the cookie.
+
+type Message:
+    role: Text
+    content: Text
+
+type Feedback:
+    rating: Text
+    timestamp: Text
+
+let RATING_OPTIONS = ["Útil", "Parcialmente útil", "Não relevante"]
+
+# The messages shown, the turns the model remembers (its chat session), which key and model that memory belongs to, the
+# feedback of each answer, and when each session was last used.
+let shown: Map[Text, List[Message]] = {}
+let memory: Map[Text, List[(Text, Text)]] = {}
+let chat_key: Map[Text, Text] = {}
+let feedback: Map[Text, Map[Text, Feedback]] = {}
+let last_used: Map[Text, Float] = {}
+
+# A session not used for a day is forgotten.
+let IDLE_SECONDS = 86400.0
+
+fn touch(sid: Text):
+    let now = std.time.now()
+    if not shown.contains_key(sid):
+        shown.insert(sid, [])
+        memory.insert(sid, [])
+        feedback.insert(sid, {})
+        for old, t in last_used.entries():
+            if now - t > IDLE_SECONDS:
+                forget(old)
+    last_used.insert(sid, now)
+
+fn forget(sid: Text):
+    shown.remove(sid)
+    memory.remove(sid)
+    chat_key.remove(sid)
+    feedback.remove(sid)
+    last_used.remove(sid)
+
+fn messages(sid: Text) -> List[Message]:
+    touch(sid)
+    shown.get(sid).unwrap()
+
+fn add_message(sid: Text, role: Text, content: Text):
+    messages(sid).push(Message(role: role, content: content))
+
+# The turns of the chat session for this key and model. A new key or model starts a new chat session, as the Python app
+# recreates its google-genai Chat, so the switch takes effect at once; the messages shown stay.
+fn memory_for(sid: Text, key: Text, model: Text) -> List[(Text, Text)]:
+    touch(sid)
+    let fingerprint = std.encoding.hex(std.crypto.sha256(std.bytes.from_text(key + "\n" + model)))
+    if chat_key.get(sid) != Some(fingerprint):
+        memory.insert(sid, [])
+        chat_key.insert(sid, fingerprint)
+    memory.get(sid).unwrap()
+
+# reset_chat: the messages, the feedback and the chat session.
+fn reset(sid: Text):
+    touch(sid)
+    shown.insert(sid, [])
+    memory.insert(sid, [])
+    feedback.insert(sid, {})
+    chat_key.remove(sid)
+
+fn feedback_of(sid: Text) -> Map[Text, Feedback]:
+    touch(sid)
+    feedback.get(sid).unwrap()
+
+# feedback_system: the rating of the answer at `index`, one of the three options.
+fn rate(sid: Text, index: Int, rating: Text) -> Result[Feedback, Text]:
+    if not RATING_OPTIONS.contains(rating):
+        return Err(f"rating must be one of: {std.text.join(RATING_OPTIONS, ", ")}")
+    let all = messages(sid)
+    match all.get(index):
+        case Some(m):
+            if m.role != "assistant":
+                return Err("only an answer of the assistant can be rated")
+        case None:
+            return Err(f"there is no message {index}")
+    let f = Feedback(rating: rating, timestamp: std.time.format(std.time.now(), "%Y-%m-%dT%H:%M:%S+00:00"))
+    feedback_of(sid).insert(f"{index}", f)
+    Ok(f)

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gemini Chatbot</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+<style>
+  :root { --bg: #ffffff; --fg: #1f2328; --muted: #656d76; --line: #d8dee4; --panel: #f6f8fa; --accent: #1a73e8;
+          --user: #eef3fd; --error-bg: #fdecea; --error-fg: #b3261e; --ok-bg: #e6f4ea; --ok-fg: #137333; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8d96a0; --line: #30363d; --panel: #161b22; --accent: #8ab4f8;
+            --user: #1c2840; --error-bg: #3b1d1b; --error-fg: #f2b8b5; --ok-bg: #16301f; --ok-fg: #a8dab5; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); padding: 20px 16px; }
+  main { max-width: 760px; width: 100%; margin: 0 auto; padding: 24px 16px 120px; }
+  h1 { font-size: 1.8rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 0 0 16px; }
+  .caption { color: var(--muted); font-size: .85rem; }
+  label { display: block; font-weight: 600; margin: 14px 0 4px; }
+  input, select, textarea, button { font: inherit; color: var(--fg); }
+  input[type=password], select { width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+  button { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+  button.wide { width: 100%; margin-top: 20px; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0 0; }
+  .note { padding: 10px 12px; border-radius: 6px; margin: 12px 0; }
+  .info { background: var(--user); }
+  .success { background: var(--ok-bg); color: var(--ok-fg); }
+  .error { background: var(--error-bg); color: var(--error-fg); }
+  .msg { display: flex; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .msg .who { width: 28px; flex: none; text-align: center; }
+  .msg .body { white-space: pre-wrap; overflow-wrap: anywhere; flex: 1; }
+  .msg.user .body { background: var(--user); border-radius: 8px; padding: 6px 10px; }
+  .rating { margin-top: 8px; font-size: .9rem; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .rating label { display: inline; font-weight: normal; margin: 0; }
+  form.ask { position: fixed; bottom: 0; left: 280px; right: 0; background: var(--bg); border-top: 1px solid var(--line); padding: 12px 16px; }
+  form.ask .row { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; }
+  form.ask textarea { flex: 1; resize: none; height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+  #toast { position: fixed; right: 16px; bottom: 80px; background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 6px; opacity: 0; transition: opacity .3s; }
+  #toast.show { opacity: .92; }
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); }
+    form.ask { left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h2>⚙️ Configurações</h2>
+    <div id="server-key" class="note success" hidden>Usando a chave de API configurada no servidor.</div>
+    <div id="key-box">
+      <label for="key">Google API Key</label>
+      <input id="key" type="password" autocomplete="off" title="Gere sua chave gratuita em https://aistudio.google.com/apikey">
+      <p class="caption">Sua chave não é armazenada em disco nem registrada em logs — fica apenas na memória desta sessão do navegador.</p>
+    </div>
+    <label for="model">Modelo</label>
+    <select id="model" title="Modelos 'flash' são mais rápidos e baratos; 'pro' prioriza qualidade da resposta."></select>
+    <hr>
+    <button id="clear" class="wide" type="button">🗑️ Limpar conversa</button>
+  </aside>
+  <main>
+    <h1 id="title">🤖 Gemini Chatbot</h1>
+    <p class="caption">Converse com o Gemini — sua chave, seu modelo, sua conversa.</p>
+    <div id="need-key" class="note info" hidden>Adicione sua Google API Key na barra lateral para começar a conversar.</div>
+    <div id="error" class="note error" hidden></div>
+    <div id="chat"></div>
+  </main>
+</div>
+<form class="ask" id="ask">
+  <div class="row">
+    <textarea id="prompt" placeholder="Digite sua mensagem..." aria-label="Mensagem"></textarea>
+    <button type="submit">Enviar</button>
+  </div>
+</form>
+<div id="toast" role="status"></div>
+<script>
+const $ = (id) => document.getElementById(id);
+let state = null;
+
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function key() { return state && state.server_key ? '' : $('key').value.trim(); }
+
+function needKey() { $('need-key').hidden = !!(state && (state.server_key || key())); }
+
+function showError(text) { $('error').textContent = text; $('error').hidden = !text; }
+
+function bubble(role, content) {
+  const m = document.createElement('div');
+  m.className = 'msg ' + role;
+  const who = document.createElement('div');
+  who.className = 'who';
+  who.textContent = role === 'assistant' ? '🤖' : '🧑';
+  const body = document.createElement('div');
+  body.className = 'body';
+  body.textContent = content;
+  m.append(who, body);
+  $('chat').append(m);
+  return m;
+}
+
+// feedback_system: the three options and Enviar under each answer.
+function ratingBox(msg, index, rating) {
+  const box = document.createElement('div');
+  box.className = 'rating';
+  state.ratings.forEach((option, i) => {
+    const l = document.createElement('label');
+    const r = document.createElement('input');
+    r.type = 'radio';
+    r.name = 'rating-' + index;
+    r.value = option;
+    r.checked = rating ? rating === option : i === 0;
+    l.append(r, ' ' + option);
+    box.append(l);
+  });
+  const send = document.createElement('button');
+  send.type = 'button';
+  send.textContent = 'Enviar';
+  const done = document.createElement('span');
+  done.className = 'caption';
+  if (rating) done.textContent = `Avaliado como “${rating}”`;
+  send.onclick = async () => {
+    const chosen = box.querySelector('input:checked').value;
+    const r = await fetch('/api/feedback', { method: 'POST', headers: { 'content-type': 'application/json' },
+                                             body: JSON.stringify({ index, rating: chosen }) });
+    if (r.ok) { done.textContent = `Avaliado como “${chosen}”`; toast('Obrigado pelo feedback!'); }
+  };
+  box.append(send, done);
+  msg.querySelector('.body').after(box);
+}
+
+async function load() {
+  state = await (await fetch('/api/state')).json();
+  document.title = state.title;
+  $('title').textContent = `${state.icon} ${state.title}`;
+  $('server-key').hidden = !state.server_key;
+  $('key-box').hidden = state.server_key;
+  $('model').replaceChildren(...state.models.map((m) => {
+    const o = document.createElement('option');
+    o.value = o.textContent = m;
+    o.selected = m === state.default_model;
+    return o;
+  }));
+  $('chat').replaceChildren();
+  state.messages.forEach((m, i) => {
+    const el = bubble(m.role, m.content);
+    if (m.role === 'assistant') ratingBox(el, i, m.rating);
+  });
+  needKey();
+}
+
+// The answer as server-sent events: data lines with {"text": piece}, then `done` or `error`.
+async function ask(text) {
+  showError('');
+  bubble('user', text);
+  const answer = bubble('assistant', 'Pensando...');
+  const body = answer.querySelector('.body');
+  const r = await fetch('/api/chat', { method: 'POST', headers: { 'content-type': 'application/json' },
+                                       body: JSON.stringify({ message: text, model: $('model').value, api_key: key() }) });
+  if (!r.ok) {
+    answer.remove();
+    const e = await r.json().catch(() => ({}));
+    showError(e.error || e.detail || `Erro ${r.status}`);
+    return;
+  }
+  const reader = r.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '', started = false;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let cut;
+    while ((cut = buffer.indexOf('\n\n')) >= 0) {
+      const block = buffer.slice(0, cut);
+      buffer = buffer.slice(cut + 2);
+      let event = 'message', data = [];
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
+      }
+      const payload = data.join('\n');
+      if (event === 'message') {
+        if (!started) { body.textContent = ''; started = true; }
+        body.textContent += JSON.parse(payload).text;
+      } else if (event === 'done') {
+        ratingBox(answer, JSON.parse(payload).index, null);
+      } else if (event === 'error') {
+        answer.remove();
+        showError(payload);
+      }
+    }
+  }
+}
+
+$('ask').onsubmit = (e) => {
+  e.preventDefault();
+  const text = $('prompt').value.trim();
+  if (!text) return;
+  if (!state.server_key && !key()) { needKey(); return; }
+  $('prompt').value = '';
+  ask(text);
+};
+$('prompt').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('ask').requestSubmit(); } };
+$('key').oninput = needKey;
+$('clear').onclick = async () => {
+  await fetch('/api/chat', { method: 'DELETE' });
+  showError('');
+  await load();
+  toast('Conversa reiniciada.');
+};
+load();
+</script>
+</body>
+</html>

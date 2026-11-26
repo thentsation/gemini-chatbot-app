@@ -1,0 +1,14 @@
+# tests/test_google_api.py and test_response.py: each error of the API gives the message of the Python app.
+from errors import describe_kind
+
+fn test_a_key_problem_says_to_check_the_key():
+    let m = "Chave de API inválida ou sem permissão para este modelo. Verifique a chave e tente novamente."
+    assert_eq(describe_kind("invalid_key", "401"), m)
+    assert_eq(describe_kind("bad_request", "400"), m)
+
+fn test_a_missing_model_and_the_quota():
+    assert_eq(describe_kind("model_not_found", ""), "Modelo indisponível no momento. Tente selecionar outro modelo na barra lateral.")
+    assert_eq(describe_kind("rate_limit", ""), "Cota da API excedida. Aguarde um pouco ou utilize outra chave.")
+
+fn test_anything_else_keeps_the_message_of_the_api():
+    assert_eq(describe_kind("server", "boom"), "Erro ao comunicar com a API do Gemini: boom")

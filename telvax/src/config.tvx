@@ -1,0 +1,22 @@
+# src/config.py: the title, the models of the picker, and where the key and the API come from.
+
+let APP_TITLE = "Gemini Chatbot"
+let APP_ICON = "🤖"
+
+fn available_models() -> List[Text]:
+    ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.1-pro-preview"]
+
+fn default_model() -> Text:
+    available_models().get(0).unwrap()
+
+# The key the server was given (`GOOGLE_API_KEY`), if any; otherwise each visitor gives theirs.
+fn env_api_key() -> Text?:
+    match std.env.get("GOOGLE_API_KEY"):
+        case Some(k):
+            None if k.is_empty() else Some(k)
+        case None:
+            None
+
+# Gemini's OpenAI-compatible endpoint, or `GEMINI_BASE_URL` (a test server, a proxy).
+fn base_url() -> Text:
+    std.env.get("GEMINI_BASE_URL").unwrap_or("https://generativelanguage.googleapis.com/v1beta/openai/")
